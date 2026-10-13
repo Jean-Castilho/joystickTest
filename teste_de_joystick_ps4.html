@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Joystick PS4 (DualShock 4) ao Vivo - Gamepad API Tester</title>
+    <meta name="description" content="Teste seu controle de PS4 DualShock 4 online e em tempo real. Verifique botões, analógicos (L3/R3), gatilhos L2/R2, vibração e conectividade Bluetooth ou USB sem instalar nada.">
+    <meta name="keywords" content="teste controle ps4, dualshock 4 tester online, testar joystick bluetooth pc, gamepad api tester, testar analogico ps4">
+    <meta name="author" content="DualShock 4 Live Tester">
+
+    <!-- Open Graph / Social Sharing -->
+    <meta property="og:title" content="Teste de Joystick PS4 (DualShock 4) ao Vivo">
+    <meta property="og:description" content="Teste todos os botões, eixos analógicos e vibração do seu DualShock 4 direto no navegador em tempo real.">
+    <meta property="og:type" content="website">
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        psblue: '#006FCD',
+                        pscyan: '#00F0FF',
+                        psdark: '#080d14',
+                        pscard: '#101726'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: radial-gradient(circle at 50% 10%, #131c31 0%, #080d14 100%);
+            min-height: 100vh;
+        }
+
+        .font-mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* DualShock 4 Button Press Glow Effects */
+        .ds4-btn {
+            transition: all 0.08s ease-out;
+        }
+
+        .ds4-btn.pressed {
+            fill: #006FCD !important;
+            stroke: #00F0FF !important;
+            filter: drop-shadow(0px 0px 8px rgba(0, 240, 255, 0.8));
+            transform: scale(0.96);
+            transform-origin: center;
+        }
+
+        .ds4-symbol.pressed {
+            fill: #FFFFFF !important;
+            filter: drop-shadow(0px 0px 10px rgba(255, 255, 255, 0.9));
+        }
+
+        .ds4-stick {
+            will-change: transform;
+            transition: transform 0.04s ease-out;
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #080d14;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1e293b;
+            border-radius: 3px;
+        }
+
+        @keyframes pulse-slow {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .animate-pulse-slow {
+            animation: pulse-slow 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+    </style>
+</head>
+<body class="text-slate-100 flex flex-col justify-between selection:bg-psblue selection:text-white">
+
+    <header class="border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-3.5 flex flex-col sm:flex-row justify-between items-center gap-3">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-psblue to-sky-400 flex items-center justify-center shadow-lg shadow-psblue/40 font-bold text-xl">
+                    <svg class="w-6 h-6 text-white" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M21 6H3c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-10 7H9v2H8v-2H6v-1h2V10h1v2h2v1zm4.5 2c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm0-3c-.83 0-1.5-.67-1.5-1.5S14.67 9 15.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm3 1.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/>
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold tracking-tight text-white flex items-center gap-2">
+                        DualShock 4 <span class="text-xs px-2 py-0.5 rounded bg-psblue/30 border border-psblue/50 text-pscyan">Live Tester</span>
+                    </h1>
+                    <p class="text-xs text-slate-400">Diagnóstico profissional de joysticks PS4 via Gamepad API</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <!-- Action Buttons: Share & Help Modal -->
+                <button onclick="openHelpModal()" class="px-3 py-2 bg-slate-900 border border-slate-700/80 hover:bg-slate-800 text-xs font-medium text-slate-300 rounded-xl transition flex items-center gap-1.5 shadow">
+                    <span>💡</span> Guia & Conexão
+                </button>
+                <button onclick="shareApp()" class="px-3 py-2 bg-slate-900 border border-slate-700/80 hover:bg-slate-800 text-xs font-medium text-slate-300 rounded-xl transition flex items-center gap-1.5 shadow">
+                    <span>🔗</span> Compartilhar
+                </button>
+
+                <!-- Connection Status Pill -->
+                <div id="connection-badge" class="flex items-center space-x-2 px-4 py-2 rounded-full bg-rose-950/60 border border-rose-800/40 text-rose-300 text-xs font-semibold transition-all duration-300 shadow-md">
+                    <span class="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse"></span>
+                    <span id="connection-text">Desconectado — Pressione um botão</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 py-6 flex-grow w-full grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        <!-- LEFT/CENTER: DualShock 4 Controller Visualizer (LG 8 Cols) -->
+        <div class="lg:col-span-8 flex flex-col items-center bg-slate-900/40 border border-slate-800/80 rounded-3xl p-6 backdrop-blur-sm shadow-2xl relative">
+            
+            <div class="w-full flex justify-between items-center mb-2">
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-pscyan animate-pulse"></span> Visualizador Interativo DS4
+                </span>
+                <div class="flex items-center gap-2">
+                    <button id="btn-vibrate" onclick="testVibration()" disabled class="px-3 py-1.5 bg-slate-800 border border-slate-700 hover:bg-psblue/80 hover:border-pscyan disabled:opacity-40 disabled:hover:bg-slate-800 text-xs text-slate-200 rounded-lg transition flex items-center gap-1.5 shadow">
+                        <span>📳</span> Testar Vibração (Rumble)
+                    </button>
+                </div>
+            </div>
+
+            <!-- Controller Vector Graphics Canvas -->
+            <div class="w-full max-w-2xl aspect-[1.5/1] relative flex items-center justify-center my-auto">
+                <svg viewBox="0 0 800 520" class="w-full h-full drop-shadow-[0_20px_40px_rgba(0,0,0,0.7)]" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <linearGradient id="bodyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                            <stop offset="0%" stop-color="#242c3d" />
+                            <stop offset="100%" stop-color="#0f141d" />
+                        </linearGradient>
+                        <linearGradient id="gripGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#19202e" />
+                            <stop offset="100%" stop-color="#090c12" />
+                        </linearGradient>
+                        <linearGradient id="lightbarGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                            <stop offset="0%" stop-color="#00F0FF" />
+                            <stop offset="100%" stop-color="#006FCD" />
+                        </linearGradient>
+                    </defs>
+
+                    <!-- Controller Grips & Body Base -->
+                    <path d="M210 130 C270 120, 530 120, 590 130 C640 140, 710 200, 740 320 C765 420, 730 490, 670 490 C620 490, 580 430, 550 360 C500 380, 300 380, 250 360 C220 430, 180 490, 130 490 C70 490, 35 420, 60 320 C90 200, 160 140, 210 130 Z" fill="url(#bodyGrad)" stroke="#334155" stroke-width="3" />
+                    
+                    <!-- Left Grip Overlay -->
+                    <path d="M60 320 C80 240, 140 180, 200 160 C210 230, 220 300, 240 350 C200 420, 150 480, 130 480 C80 480, 45 420, 60 320 Z" fill="url(#gripGrad)" opacity="0.6"/>
+                    <!-- Right Grip Overlay -->
+                    <path d="M740 320 C720 240, 660 180, 600 160 C590 230, 580 300, 560 350 C600 420, 650 480, 670 480 C720 480, 755 420, 740 320 Z" fill="url(#gripGrad)" opacity="0.6"/>
+
+                    <!-- Top Lightbar Area -->
+                    <path id="lightbar" d="M310 100 L490 100 C470 120, 330 120, 310 100 Z" fill="url(#lightbarGrad)" opacity="0.9" />
+
+                    <!-- L1 & R1 Shoulder Buttons -->
+                    <path id="svg-btn-4" class="ds4-btn cursor-pointer" d="M180 95 C 220 90, 270 95, 290 110 L 210 125 C 190 115, 180 105, 180 95 Z" fill="#2d3748" stroke="#4a5568" stroke-width="2"/>
+                    <text x="235" y="110" fill="#a0aec0" font-size="12" font-weight="bold" text-anchor="middle">L1</text>
+
+                    <path id="svg-btn-5" class="ds4-btn cursor-pointer" d="M620 95 C 580 90, 530 95, 510 110 L 590 125 C 610 115, 620 105, 620 95 Z" fill="#2d3748" stroke="#4a5568" stroke-width="2"/>
+                    <text x="565" y="110" fill="#a0aec0" font-size="12" font-weight="bold" text-anchor="middle">R1</text>
+
+                    <!-- Touchpad Area (Button 17) -->
+                    <rect id="svg-btn-17" class="ds4-btn cursor-pointer" x="290" y="125" width="220" height="120" rx="12" fill="#18202c" stroke="#334155" stroke-width="2"/>
+                    <text x="400" y="190" fill="#475569" font-size="13" font-weight="600" letter-spacing="2" text-anchor="middle">TOUCHPAD</text>
+
+                    <!-- Share & Options Buttons (Buttons 8 & 9) -->
+                    <rect id="svg-btn-8" class="ds4-btn cursor-pointer" x="235" y="145" width="28" height="14" rx="7" fill="#2d3748" stroke="#4a5568" stroke-width="1.5"/>
+                    <text x="249" y="137" fill="#94a3b8" font-size="9" font-weight="bold" text-anchor="middle">SHARE</text>
+
+                    <rect id="svg-btn-9" class="ds4-btn cursor-pointer" x="537" y="145" width="28" height="14" rx="7" fill="#2d3748" stroke="#4a5568" stroke-width="1.5"/>
+                    <text x="551" y="137" fill="#94a3b8" font-size="9" font-weight="bold" text-anchor="middle">OPTIONS</text>
+
+                    <!-- D-PAD (Directional Buttons 12, 13, 14, 15) -->
+                    <g transform="translate(180, 240)">
+                        <circle cx="0" cy="0" r="54" fill="#111827" stroke="#1f2937" stroke-width="2"/>
+                        <!-- Up (12) -->
+                        <path id="svg-btn-12" class="ds4-btn cursor-pointer" d="M-13 -48 L13 -48 L13 -15 L-13 -15 Z" fill="#27303f" stroke="#374151" stroke-width="1.5"/>
+                        <polygon points="0,-40 -7,-28 7,-28" fill="#9ca3af"/>
+                        <!-- Right (15) -->
+                        <path id="svg-btn-15" class="ds4-btn cursor-pointer" d="M15 -13 L48 -13 L48 13 L15 13 Z" fill="#27303f" stroke="#374151" stroke-width="1.5"/>
+                        <polygon points="40,0 28,-7 28,7" fill="#9ca3af"/>
+                        <!-- Down (13) -->
+                        <path id="svg-btn-13" class="ds4-btn cursor-pointer" d="M-13 15 L13 15 L13 48 L-13 48 Z" fill="#27303f" stroke="#374151" stroke-width="1.5"/>
+                        <polygon points="0,40 -7,28 7,28" fill="#9ca3af"/>
+                        <!-- Left (14) -->
+                        <path id="svg-btn-14" class="ds4-btn cursor-pointer" d="M-48 -13 L-15 -13 L-15 13 L-48 13 Z" fill="#27303f" stroke="#374151" stroke-width="1.5"/>
+                        <polygon points="-40,0 -28,-7 -28,7" fill="#9ca3af"/>
+                    </g>
+
+                    <!-- FACE BUTTONS (Triangle 3, Circle 1, Cross 0, Square 2) -->
+                    <g transform="translate(620, 240)">
+                        <circle cx="0" cy="0" r="54" fill="#111827" stroke="#1f2937" stroke-width="2"/>
+                        
+                        <!-- Triangle (Button 3) -->
+                        <circle id="svg-btn-3" class="ds4-btn cursor-pointer" cx="0" cy="-33" r="16" fill="#27303f" stroke="#374151" stroke-width="1.5"/>
+                        <polygon id="sym-3" class="ds4-symbol" points="0,-40 -7,-28 7,-28" fill="#00F0FF" stroke="#00F0FF" stroke-width="1.5"/>
+                        
+                        <!-- Circle (Button 1) -->
+                        <circle id="svg-btn-1" class="ds4-btn cursor-pointer" cx="33" cy="0" r="16" fill="#27303f" stroke="#374151" stroke-width="1.5"/>
+                        <circle id="sym-1" class="ds4-symbol" cx="33" cy="0" r="6" fill="none" stroke="#FF5555" stroke-width="2.5"/>
+
+                        <!-- Cross / X (Button 0) -->
+                        <circle id="svg-btn-0" class="ds4-btn cursor-pointer" cx="0" cy="33" r="16" fill="#27303f" stroke="#374151" stroke-width="1.5"/>
+                        <g id="sym-0" class="ds4-symbol" stroke="#5599FF" stroke-width="2.5" stroke-linecap="round">
+                            <line x1="-5" y1="28" x2="5" y2="38" />
+                            <line x1="5" y1="28" x2="-5" y2="38" />
+                        </g>
+
+                        <!-- Square (Button 2) -->
+                        <circle id="svg-btn-2" class="ds4-btn cursor-pointer" cx="-33" cy="0" r="16" fill="#27303f" stroke="#374151" stroke-width="1.5"/>
+                        <rect id="sym-2" class="ds4-symbol" x="-38" y="-5" width="10" height="10" fill="none" stroke="#FF77CC" stroke-width="2.5"/>
+                    </g>
+
+                    <!-- PS BUTTON (Button 16) -->
+                    <circle id="svg-btn-16" class="ds4-btn cursor-pointer" cx="400" cy="310" r="18" fill="#1e293b" stroke="#334155" stroke-width="2"/>
+                    <path d="M394 306 L406 306 L406 312 C406 314 402 316 400 316 C398 316 394 314 394 312 Z" fill="#006FCD"/>
+                    <text x="400" y="323" fill="#94a3b8" font-size="8" font-weight="bold" text-anchor="middle">PS</text>
+
+                    <!-- LEFT ANALOG STICK (L3 - Button 10) -->
+                    <g transform="translate(310, 340)">
+                        <!-- Base Ring -->
+                        <circle cx="0" cy="0" r="44" fill="#0b0f17" stroke="#1e293b" stroke-width="3"/>
+                        <!-- Moving Thumbstick -->
+                        <g id="svg-stick-left" class="ds4-stick">
+                            <circle id="svg-btn-10" class="ds4-btn cursor-pointer" cx="0" cy="0" r="30" fill="#222c3c" stroke="#475569" stroke-width="2"/>
+                            <circle cx="0" cy="0" r="22" fill="#1a2332" stroke="#334155" stroke-width="1"/>
+                            <text x="0" y="4" fill="#64748b" font-size="10" font-weight="bold" text-anchor="middle">L3</text>
+                        </g>
+                    </g>
+
+                    <!-- RIGHT ANALOG STICK (R3 - Button 11) -->
+                    <g transform="translate(490, 340)">
+                        <!-- Base Ring -->
+                        <circle cx="0" cy="0" r="44" fill="#0b0f17" stroke="#1e293b" stroke-width="3"/>
+                        <!-- Moving Thumbstick -->
+                        <g id="svg-stick-right" class="ds4-stick">
+                            <circle id="svg-btn-11" class="ds4-btn cursor-pointer" cx="0" cy="0" r="30" fill="#222c3c" stroke="#475569" stroke-width="2"/>
+                            <circle cx="0" cy="0" r="22" fill="#1a2332" stroke="#334155" stroke-width="1"/>
+                            <text x="0" y="4" fill="#64748b" font-size="10" font-weight="bold" text-anchor="middle">R3</text>
+                        </g>
+                    </g>
+                </svg>
+            </div>
+
+            <div class="w-full grid grid-cols-2 gap-4 mt-2 pt-4 border-t border-slate-800/80">
+                <!-- L2 Trigger Progress (Button 6) -->
+                <div class="bg-slate-950/70 p-3 rounded-2xl border border-slate-800">
+                    <div class="flex justify-between items-center text-xs mb-1.5">
+                        <span class="font-bold text-slate-300">Gatilho L2 (Button 6)</span>
+                        <span id="val-l2" class="font-mono text-pscyan font-bold">0.00 (0%)</span>
+                    </div>
+                    <div class="w-full bg-slate-900 h-3 rounded-full overflow-hidden border border-slate-800">
+                        <div id="bar-l2" class="h-full bg-gradient-to-r from-psblue to-pscyan w-0 transition-all duration-75"></div>
+                    </div>
+                </div>
+
+                <!-- R2 Trigger Progress (Button 7) -->
+                <div class="bg-slate-950/70 p-3 rounded-2xl border border-slate-800">
+                    <div class="flex justify-between items-center text-xs mb-1.5">
+                        <span class="font-bold text-slate-300">Gatilho R2 (Button 7)</span>
+                        <span id="val-r2" class="font-mono text-pscyan font-bold">0.00 (0%)</span>
+                    </div>
+                    <div class="w-full bg-slate-900 h-3 rounded-full overflow-hidden border border-slate-800">
+                        <div id="bar-r2" class="h-full bg-gradient-to-r from-psblue to-pscyan w-0 transition-all duration-75"></div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="lg:col-span-4 space-y-5">
+            
+            <!-- Hardware Info Box -->
+            <div class="bg-slate-900/40 border border-slate-800/80 rounded-3xl p-5 backdrop-blur-sm shadow-xl">
+                <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-psblue"></span> Telemetria do Controle
+                </h2>
+                <div class="space-y-2.5 text-xs">
+                    <div class="flex justify-between pb-2 border-b border-slate-800/80">
+                        <span class="text-slate-400">Modelo Detectado:</span>
+                        <span id="info-id" class="font-medium text-slate-200 truncate max-w-[180px]" title="Nenhum">Nenhum</span>
+                    </div>
+                    <div class="flex justify-between pb-2 border-b border-slate-800/80">
+                        <span class="text-slate-400">Mapeamento API:</span>
+                        <span id="info-mapping" class="font-mono text-pscyan font-bold">standard</span>
+                    </div>
+                    <div class="flex justify-between pb-2 border-b border-slate-800/80">
+                        <span class="text-slate-400">Índice no Sistema:</span>
+                        <span id="info-index" class="font-mono text-slate-200">-</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-slate-400">Botões / Eixos:</span>
+                        <span id="info-counts" class="font-mono text-slate-200">18 B / 4 E</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sticks Numerical Telemetry -->
+            <div class="bg-slate-900/40 border border-slate-800/80 rounded-3xl p-5 backdrop-blur-sm shadow-xl">
+                <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4 flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-pscyan"></span> Eixos Analógicos (Axes)
+                </h2>
+                
+                <div class="space-y-4 text-xs font-mono">
+                    <!-- Left Stick X -->
+                    <div>
+                        <div class="flex justify-between mb-1 text-slate-300">
+                            <span>L-Stick X (Axis 0):</span>
+                            <span id="txt-axis-0" class="text-pscyan font-bold">0.0000</span>
+                        </div>
+                        <div class="w-full bg-slate-950 h-2 rounded-full overflow-hidden border border-slate-800 relative">
+                            <div id="bar-axis-0" class="absolute top-0 bottom-0 bg-psblue w-0 left-1/2"></div>
+                        </div>
+                    </div>
+
+                    <!-- Left Stick Y -->
+                    <div>
+                        <div class="flex justify-between mb-1 text-slate-300">
+                            <span>L-Stick Y (Axis 1):</span>
+                            <span id="txt-axis-1" class="text-pscyan font-bold">0.0000</span>
+                        </div>
+                        <div class="w-full bg-slate-950 h-2 rounded-full overflow-hidden border border-slate-800 relative">
+                            <div id="bar-axis-1" class="absolute top-0 bottom-0 bg-psblue w-0 left-1/2"></div>
+                        </div>
+                    </div>
+
+                    <!-- Right Stick X -->
+                    <div>
+                        <div class="flex justify-between mb-1 text-slate-300">
+                            <span>R-Stick X (Axis 2):</span>
+                            <span id="txt-axis-2" class="text-sky-400 font-bold">0.0000</span>
+                        </div>
+                        <div class="w-full bg-slate-950 h-2 rounded-full overflow-hidden border border-slate-800 relative">
+                            <div id="bar-axis-2" class="absolute top-0 bottom-0 bg-sky-500 w-0 left-1/2"></div>
+                        </div>
+                    </div>
+
+                    <!-- Right Stick Y -->
+                    <div>
+                        <div class="flex justify-between mb-1 text-slate-300">
+                            <span>R-Stick Y (Axis 3):</span>
+                            <span id="txt-axis-3" class="text-sky-400 font-bold">0.0000</span>
+                        </div>
+                        <div class="w-full bg-slate-950 h-2 rounded-full overflow-hidden border border-slate-800 relative">
+                            <div id="bar-axis-3" class="absolute top-0 bottom-0 bg-sky-500 w-0 left-1/2"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mapping Reference Table -->
+            <div class="bg-slate-900/40 border border-slate-800/80 rounded-3xl p-5 backdrop-blur-sm shadow-xl">
+                <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Guia de Mapeamento PS4</h2>
+                <div class="grid grid-cols-2 gap-x-2 gap-y-1 text-[11px] text-slate-400 font-mono">
+                    <div>B0: ✕ (Cross)</div>
+                    <div>B1: ○ (Circle)</div>
+                    <div>B2: □ (Square)</div>
+                    <div>B3: Δ (Triangle)</div>
+                    <div>B4: L1 / B5: R1</div>
+                    <div>B6: L2 / B7: R2</div>
+                    <div>B8: Share</div>
+                    <div>B9: Options</div>
+                    <div>B10: L3 / B11: R3</div>
+                    <div>B12-15: D-Pad</div>
+                    <div>B16: PS Button</div>
+                    <div>B17: Touchpad</div>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <footer class="border-t border-slate-800/80 bg-slate-950/90 py-8 mt-12 text-slate-400 text-xs">
+        <div class="max-w-7xl mx-auto px-4 grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            <div>
+                <h3 class="text-white font-bold mb-2 flex items-center gap-1.5"><span>🎮</span> Sobre a Ferramenta</h3>
+                <p class="leading-relaxed">Este testador utiliza a Gamepad API do W3C para inspecionar dispositivos DualShock 4 (PS4) em tempo real via USB ou Bluetooth sem necessidade de plugins ou softwares adicionais.</p>
+            </div>
+            <div>
+                <h3 class="text-white font-bold mb-2 flex items-center gap-1.5"><span>⚡</span> Dicas de Conexão</h3>
+                <p class="leading-relaxed mb-1"><strong>Bluetooth:</strong> Pressione e segure <code class="bg-slate-900 px-1.5 py-0.5 rounded text-pscyan">SHARE</code> + <code class="bg-slate-900 px-1.5 py-0.5 rounded text-pscyan">PS</code> até a luz piscar rapidamente, depois pareie nas configurações do sistema.</p>
+            </div>
+            <div>
+                <h3 class="text-white font-bold mb-2 flex items-center gap-1.5"><span>🔒</span> Privacidade & Compatibilidade</h3>
+                <p class="leading-relaxed">Compatível com Google Chrome, Microsoft Edge, Opera e navegadores baseados em Chromium. Nenhum dado de controle é gravado ou enviado para servidores externos.</p>
+            </div>
+        </div>
+        <div class="max-w-7xl mx-auto px-4 pt-4 border-t border-slate-900 flex flex-col sm:flex-row justify-between items-center gap-3 text-slate-500">
+            <p>&copy; 2026 DualShock 4 Live Tester. Todos os direitos reservados.</p>
+            <p class="flex items-center gap-1">Desenvolvido para web de alta performance 🚀</p>
+        </div>
+    </footer>
+
+    <div id="help-modal" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl relative">
+            <button onclick="closeHelpModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white p-2 text-lg font-bold">✕</button>
+            <h3 class="text-base font-bold text-white mb-3 flex items-center gap-2"><span>💡</span> Guia de Conexão e Solução de Problemas</h3>
+            <div class="space-y-3 text-slate-300 text-xs leading-relaxed">
+                <p><strong>1. Como conectar via Bluetooth:</strong> Com o controle desligado, segure o botão <span class="text-pscyan font-mono">SHARE</span> e em seguida o botão <span class="text-pscyan font-mono">PS</span> até a barra de luz começar a piscar em dois flashes rápidos. Abra as configurações de Bluetooth do seu computador ou celular e selecione "Wireless Controller".</p>
+                <p><strong>2. O controle não aparece?</strong> A Gamepad API exige que você <strong>pressione qualquer botão</strong> (como o botão PS ou X) após a conexão Bluetooth para que o navegador registre o hardware.</p>
+                <p><strong>3. Navegadores recomendados:</strong> Google Chrome ou Microsoft Edge no Windows, macOS, Linux ou Android.</p>
+            </div>
+            <div class="mt-6 flex justify-end">
+                <button onclick="closeHelpModal()" class="px-4 py-2 bg-psblue hover:bg-blue-600 text-white font-semibold rounded-xl text-xs shadow-lg transition">Entendido</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State variables
+        let gamepadIndex = null;
+        const deadzone = 0.05; // Filter minor drift
+
+        // Official W3C Standard Button mappings for DualShock 4
+        const PS4_BUTTON_MAP = {
+            0: { name: "Cross", id: "svg-btn-0", sym: "sym-0" },
+            1: { name: "Circle", id: "svg-btn-1", sym: "sym-1" },
+            2: { name: "Square", id: "svg-btn-2", sym: "sym-2" },
+            3: { name: "Triangle", id: "svg-btn-3", sym: "sym-3" },
+            4: { name: "L1", id: "svg-btn-4" },
+            5: { name: "R1", id: "svg-btn-5" },
+            6: { name: "L2", id: "svg-btn-6" }, // Trigger analog
+            7: { name: "R2", id: "svg-btn-7" }, // Trigger analog
+            8: { name: "Share", id: "svg-btn-8" },
+            9: { name: "Options", id: "svg-btn-9" },
+            10: { name: "L3", id: "svg-btn-10" },
+            11: { name: "R3", id: "svg-btn-11" },
+            12: { name: "DPad-Up", id: "svg-btn-12" },
+            13: { name: "DPad-Down", id: "svg-btn-13" },
+            14: { name: "DPad-Left", id: "svg-btn-14" },
+            15: { name: "DPad-Right", id: "svg-btn-15" },
+            16: { name: "PS-Home", id: "svg-btn-16" },
+            17: { name: "Touchpad", id: "svg-btn-17" }
+        };
+
+        // Modal Controls
+        function openHelpModal() {
+            document.getElementById('help-modal').classList.remove('hidden');
+        }
+        function closeHelpModal() {
+            document.getElementById('help-modal').classList.add('hidden');
+        }
+
+        // Share App URL
+        function shareApp() {
+            if (navigator.share) {
+                navigator.share({
+                    title: 'Teste de Joystick PS4 ao Vivo',
+                    text: 'Teste seu controle DualShock 4 direto no navegador!',
+                    url: window.location.href
+                }).catch(() => {});
+            } else {
+                const dummy = document.createElement('input');
+                document.body.appendChild(dummy);
+                dummy.value = window.location.href;
+                dummy.select();
+                document.execCommand('copy');
+                document.body.removeChild(dummy);
+                alert('Link copiado para a área de transferência!');
+            }
+        }
+
+        // Event listeners for Gamepad API
+        window.addEventListener("gamepadconnected", (e) => {
+            console.log("Gamepad conectado:", e.gamepad);
+            gamepadIndex = e.gamepad.index;
+            updateConnectionUI(true, e.gamepad);
+        });
+
+        window.addEventListener("gamepaddisconnected", (e) => {
+            console.log("Gamepad desconectado:", e.gamepad);
+            if (gamepadIndex === e.gamepad.index) {
+                gamepadIndex = null;
+                updateConnectionUI(false);
+            }
+        });
+
+        function updateConnectionUI(isConnected, gp = null) {
+            const badge = document.getElementById("connection-badge");
+            const text = document.getElementById("connection-text");
+            const btnVibrate = document.getElementById("btn-vibrate");
+
+            if (isConnected && gp) {
+                badge.className = "flex items-center space-x-2 px-4 py-2 rounded-full bg-emerald-950/80 border border-emerald-800/50 text-emerald-300 text-xs font-semibold shadow-lg shadow-emerald-950/50 transition-all";
+                badge.querySelector("span").className = "w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399]";
+                text.textContent = `Conectado: DualShock 4 [${gp.index}]`;
+
+                document.getElementById("info-id").textContent = gp.id;
+                document.getElementById("info-mapping").textContent = gp.mapping || "standard";
+                document.getElementById("info-index").textContent = gp.index;
+                document.getElementById("info-counts").textContent = `${gp.buttons.length} B / ${gp.axes.length} E`;
+                btnVibrate.disabled = false;
+            } else {
+                badge.className = "flex items-center space-x-2 px-4 py-2 rounded-full bg-rose-950/60 border border-rose-800/40 text-rose-300 text-xs font-semibold shadow-md transition-all";
+                badge.querySelector("span").className = "w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse";
+                text.textContent = "Desconectado — Pressione um botão";
+
+                document.getElementById("info-id").textContent = "Nenhum";
+                document.getElementById("info-mapping").textContent = "N/A";
+                document.getElementById("info-index").textContent = "-";
+                document.getElementById("info-counts").textContent = "0 B / 0 E";
+                btnVibrate.disabled = true;
+
+                resetVisuals();
+            }
+        }
+
+        function resetVisuals() {
+            Object.values(PS4_BUTTON_MAP).forEach(item => {
+                const el = document.getElementById(item.id);
+                if (el) el.classList.remove('pressed');
+                if (item.sym) {
+                    const symEl = document.getElementById(item.sym);
+                    if (symEl) symEl.classList.remove('pressed');
+                }
+            });
+
+            document.getElementById("svg-stick-left").style.transform = `translate(0px, 0px)`;
+            document.getElementById("svg-stick-right").style.transform = `translate(0px, 0px)`;
+
+            document.getElementById("bar-l2").style.width = '0%';
+            document.getElementById("val-l2").textContent = '0.00 (0%)';
+            document.getElementById("bar-r2").style.width = '0%';
+            document.getElementById("val-r2").textContent = '0.00 (0%)';
+        }
+
+        // Test haptic feedback / rumble
+        function testVibration() {
+            const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+            if (gamepadIndex !== null && gamepads[gamepadIndex]) {
+                const gp = gamepads[gamepadIndex];
+                if (gp.vibrationActuator) {
+                    gp.vibrationActuator.playEffect("dual-rumble", {
+                        startDelay: 0,
+                        duration: 800,
+                        weakMagnitude: 0.8,
+                        strongMagnitude: 1.0
+                    }).catch(err => console.warn("Vibração não suportada pelo driver:", err));
+                } else {
+                    console.warn("API de vibração não suportada neste navegador ou driver.");
+                }
+            }
+        }
+
+        // Main game polling loop with requestAnimationFrame
+        function pollGamepad() {
+            const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+            let gp = null;
+
+            if (gamepadIndex !== null && gamepads[gamepadIndex]) {
+                gp = gamepads[gamepadIndex];
+            } else {
+                for (let i = 0; i < gamepads.length; i++) {
+                    if (gamepads[i]) {
+                        gamepadIndex = i;
+                        gp = gamepads[i];
+                        updateConnectionUI(true, gp);
+                        break;
+                    }
+                }
+            }
+
+            if (gp) {
+                // 1. Process Buttons
+                gp.buttons.forEach((btn, index) => {
+                    const mapItem = PS4_BUTTON_MAP[index];
+                    if (mapItem) {
+                        const el = document.getElementById(mapItem.id);
+                        const isPressed = btn.pressed || btn.value > 0.15;
+
+                        if (el) {
+                            if (isPressed) el.classList.add('pressed');
+                            else el.classList.remove('pressed');
+                        }
+
+                        if (mapItem.sym) {
+                            const symEl = document.getElementById(mapItem.sym);
+                            if (symEl) {
+                                if (isPressed) symEl.classList.add('pressed');
+                                else symEl.classList.remove('pressed');
+                            }
+                        }
+                    }
+                });
+
+                // 2. Process L2 / R2 Analog Pressure (Buttons 6 & 7)
+                const l2Val = gp.buttons[6] ? gp.buttons[6].value : 0;
+                const r2Val = gp.buttons[7] ? gp.buttons[7].value : 0;
+
+                document.getElementById("bar-l2").style.width = `${l2Val * 100}%`;
+                document.getElementById("val-l2").textContent = `${l2Val.toFixed(2)} (${Math.round(l2Val * 100)}%)`;
+
+                document.getElementById("bar-r2").style.width = `${r2Val * 100}%`;
+                document.getElementById("val-r2").textContent = `${r2Val.toFixed(2)} (${Math.round(r2Val * 100)}%)`;
+
+                // 3. Process Analog Sticks (Axes 0 to 3)
+                const axes = gp.axes;
+                const lx = Math.abs(axes[0] || 0) > deadzone ? axes[0] : 0;
+                const ly = Math.abs(axes[1] || 0) > deadzone ? axes[1] : 0;
+                const rx = Math.abs(axes[2] || 0) > deadzone ? axes[2] : 0;
+                const ry = Math.abs(axes[3] || 0) > deadzone ? axes[3] : 0;
+
+                const stickLeft = document.getElementById("svg-stick-left");
+                const stickRight = document.getElementById("svg-stick-right");
+
+                if (stickLeft) stickLeft.style.transform = `translate(${lx * 20}px, ${ly * 20}px)`;
+                if (stickRight) stickRight.style.transform = `translate(${rx * 20}px, ${ry * 20}px)`;
+
+                document.getElementById("txt-axis-0").textContent = lx.toFixed(4);
+                document.getElementById("txt-axis-1").textContent = ly.toFixed(4);
+                document.getElementById("txt-axis-2").textContent = rx.toFixed(4);
+                document.getElementById("txt-axis-3").textContent = ry.toFixed(4);
+
+                updateAxisMeter("bar-axis-0", lx);
+                updateAxisMeter("bar-axis-1", ly);
+                updateAxisMeter("bar-axis-2", rx);
+                updateAxisMeter("bar-axis-3", ry);
+            }
+
+            requestAnimationFrame(pollGamepad);
+        }
+
+        function updateAxisMeter(elementId, value) {
+            const bar = document.getElementById(elementId);
+            if (!bar) return;
+            const percent = (value + 1) / 2 * 100;
+            if (value >= 0) {
+                bar.style.left = '50%';
+                bar.style.width = `${percent - 50}%`;
+            } else {
+                bar.style.left = `${percent}%`;
+                bar.style.width = `${50 - percent}%`;
+            }
+        }
+
+        window.requestAnimationFrame(pollGamepad);
+    </script>
+</body>
+</html>
